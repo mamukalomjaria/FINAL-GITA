@@ -14,13 +14,13 @@ namespace HMS.API.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IConfiguration _configuration;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            RoleManager<IdentityRole> roleManager,
+            RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration configuration)
         {
             _userManager = userManager;
@@ -52,13 +52,13 @@ namespace HMS.API.Controllers
 
             // Create roles if they don't exist
             if (!await _roleManager.RoleExistsAsync("Admin"))
-                await _roleManager.CreateAsync(new IdentityRole("Admin"));
+                await _roleManager.CreateAsync(new IdentityRole<Guid> { Name = "Admin" });
 
             if (!await _roleManager.RoleExistsAsync("Manager"))
-                await _roleManager.CreateAsync(new IdentityRole("Manager"));
+                await _roleManager.CreateAsync(new IdentityRole<Guid> { Name = "Manager" });
 
             if (!await _roleManager.RoleExistsAsync("Guest"))
-                await _roleManager.CreateAsync(new IdentityRole("Guest"));
+                await _roleManager.CreateAsync(new IdentityRole<Guid> { Name = "Guest" });
 
             // Assign Guest role by default
             await _userManager.AddToRoleAsync(user, "Guest");
@@ -91,7 +91,7 @@ namespace HMS.API.Controllers
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email)
             };
 

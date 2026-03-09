@@ -1,10 +1,11 @@
 ﻿using HMS.Core.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace HMS.Infrastructure.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -21,24 +22,34 @@ namespace HMS.Infrastructure.Data
 
         public DbSet<ReservationRoom> ReservationRooms { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder builder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(builder);
+            base.OnModelCreating(modelBuilder);
 
-            builder.Entity<ReservationRoom>()
+            modelBuilder.Entity<Guest>()
+                .HasIndex(x => x.PersonalNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<Guest>()
+                .HasIndex(x => x.PhoneNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasIndex(x => x.PersonalNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasIndex(x => x.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasOne(u => u.Hotel)
+                .WithMany(h => h.Managers)
+                .HasForeignKey(u => u.HotelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ReservationRoom>()
                 .HasKey(rr => new { rr.ReservationId, rr.RoomId });
-
-            builder.Entity<ReservationRoom>()
-                .HasOne(rr => rr.Reservation)
-                .WithMany(r => r.ReservationRooms)
-                .HasForeignKey(rr => rr.ReservationId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<ReservationRoom>()
-                .HasOne(rr => rr.Room)
-                .WithMany(r => r.ReservationRooms)
-                .HasForeignKey(rr => rr.RoomId)
-                .OnDelete(DeleteBehavior.Restrict);  
         }
 
     }

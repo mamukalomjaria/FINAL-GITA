@@ -23,9 +23,7 @@ namespace HMS.API.Controllers
             _reservationService = reservationService;
         }
 
-        // ===============================
         // HOTELS
-        // ===============================
 
         [HttpGet]
         public async Task<IActionResult> GetHotels([FromQuery] HotelFilterDto filter)
@@ -50,7 +48,9 @@ namespace HMS.API.Controllers
         public async Task<IActionResult> CreateHotel(CreateHotelDto dto)
         {
             var hotel = await _hotelService.CreateHotel(dto);
-            return Ok(hotel);
+
+            return CreatedAtAction(nameof(GetHotel),
+                new { hotelId = hotel.Id }, hotel);
         }
 
         [Authorize(Roles = "Admin")]
@@ -74,15 +74,13 @@ namespace HMS.API.Controllers
             if (!result)
                 return BadRequest("Hotel cannot be deleted");
 
-            return Ok("Hotel deleted");
+            return NoContent();
         }
 
-        // ===============================
         // ROOMS
-        // ===============================
 
         [HttpGet("{hotelId}/rooms")]
-        public async Task<IActionResult> GetRooms(Guid hotelId, double? minPrice, double? maxPrice)
+        public async Task<IActionResult> GetRooms(Guid hotelId, [FromQuery] double? minPrice, [FromQuery] double? maxPrice)
         {
             var rooms = await _roomService.GetRooms(hotelId, minPrice, maxPrice);
             return Ok(rooms);
@@ -104,7 +102,9 @@ namespace HMS.API.Controllers
         public async Task<IActionResult> CreateRoom(Guid hotelId, CreateRoomDto dto)
         {
             var room = await _roomService.CreateRoom(hotelId, dto);
-            return Ok(room);
+
+            return CreatedAtAction(nameof(GetRoom),
+                new { hotelId, roomId = room.Id }, room);
         }
 
         [Authorize(Roles = "Admin,Manager")]
@@ -116,7 +116,7 @@ namespace HMS.API.Controllers
             if (!result)
                 return NotFound();
 
-            return Ok();
+            return NoContent();
         }
 
         [Authorize(Roles = "Admin,Manager")]
@@ -128,21 +128,22 @@ namespace HMS.API.Controllers
             if (!result)
                 return BadRequest("Room has active reservations");
 
-            return Ok("Room deleted");
+            return NoContent();
         }
 
-        // ===============================
         // RESERVATIONS
-        // ===============================
 
         [Authorize(Roles = "Guest")]
         [HttpPost("{hotelId}/reservations")]
         public async Task<IActionResult> CreateReservation(Guid hotelId, CreateReservationDto dto)
         {
             var reservation = await _reservationService.CreateReservation(hotelId, dto);
-            return Ok(reservation);
+
+            return CreatedAtAction(nameof(GetReservations),
+                new { hotelId }, reservation);
         }
 
+        [Authorize(Roles = "Guest")]
         [HttpPut("reservations/{reservationId}")]
         public async Task<IActionResult> UpdateReservation(Guid reservationId, UpdateReservationDto dto)
         {
@@ -151,7 +152,7 @@ namespace HMS.API.Controllers
             if (!result)
                 return BadRequest();
 
-            return Ok();
+            return NoContent();
         }
 
         [Authorize(Roles = "Admin,Manager")]
@@ -172,6 +173,15 @@ namespace HMS.API.Controllers
                 return NotFound();
 
             return NoContent();
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] Guid? hotelId,[FromQuery] Guid? guestId,[FromQuery] Guid? roomId,[FromQuery] DateTime? date)
+        {
+            var result = await _reservationService
+                .SearchReservations(hotelId, guestId, roomId, date);
+
+            return Ok(result);
         }
     }
 }

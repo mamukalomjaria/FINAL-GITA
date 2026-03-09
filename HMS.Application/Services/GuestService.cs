@@ -1,31 +1,26 @@
 ﻿using HMS.Application.DTOs;
 using HMS.Core.Entities;
-using HMS.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using HMS.Infrastructure.UnitOfWork;
 
 namespace HMS.Application.Services
 {
     public class GuestService : IGuestService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unit;
 
-        public GuestService(ApplicationDbContext context)
+        public GuestService(IUnitOfWork unit)
         {
-            _context = context;
+            _unit = unit;
         }
 
         public async Task<GuestDto> CreateGuest(CreateGuestDto dto)
         {
-            var personalExists = await _context.Guests
-                .AnyAsync(g => g.PersonalNumber == dto.PersonalNumber);
+            var guests = await _unit.Guests.GetAllAsync();
 
-            if (personalExists)
+            if (guests.Any(g => g.PersonalNumber == dto.PersonalNumber))
                 throw new Exception("Personal number already exists");
 
-            var phoneExists = await _context.Guests
-                .AnyAsync(g => g.PhoneNumber == dto.PhoneNumber);
-
-            if (phoneExists)
+            if (guests.Any(g => g.PhoneNumber == dto.PhoneNumber))
                 throw new Exception("Phone number already exists");
 
             var guest = new Guest
@@ -37,9 +32,8 @@ namespace HMS.Application.Services
                 PhoneNumber = dto.PhoneNumber
             };
 
-            _context.Guests.Add(guest);
-
-            await _context.SaveChangesAsync();
+            await _unit.Guests.AddAsync(guest);
+            await _unit.SaveAsync();
 
             return new GuestDto
             {
@@ -53,7 +47,7 @@ namespace HMS.Application.Services
 
         public async Task<GuestDto?> GetGuest(Guid id)
         {
-            var guest = await _context.Guests.FindAsync(id);
+            var guest = await _unit.Guests.GetByIdAsync(id);
 
             if (guest == null)
                 return null;
@@ -70,35 +64,40 @@ namespace HMS.Application.Services
 
         public async Task<bool> UpdateGuest(Guid id, UpdateGuestDto dto)
         {
-            var guest = await _context.Guests.FindAsync(id);
+            var guest = await _unit.Guests.GetByIdAsync(id);
 
             if (guest == null)
                 return false;
+
+            var guests = await _unit.Guests.GetAllAsync();
+
+            if (guests.Any(g => g.PhoneNumber == dto.PhoneNumber && g.Id != id))
+                throw new Exception("Phone number already exists");
 
             guest.FirstName = dto.FirstName;
             guest.LastName = dto.LastName;
             guest.PhoneNumber = dto.PhoneNumber;
 
-            await _context.SaveChangesAsync();
+            _unit.Guests.Update(guest);
+
+            await _unit.SaveAsync();
 
             return true;
         }
 
         public async Task<bool> DeleteGuest(Guid id)
         {
-            var guest = await _context.Guests
-                .Include(g => g.Reservations)
-                .FirstOrDefaultAsync(g => g.Id == id);
+            var guest = await _unit.Guests.GetByIdAsync(id);
 
             if (guest == null)
                 return false;
 
             if (guest.Reservations.Any(r => r.CheckoutDate >= DateTime.Today))
-                throw new Exception("Guest has active reservations");
+                throw new Exception("Guest has active or future reservations");
 
-            _context.Guests.Remove(guest);
+            _unit.Guests.Delete(guest);
 
-            await _context.SaveChangesAsync();
+            await _unit.SaveAsync();
 
             return true;
         }

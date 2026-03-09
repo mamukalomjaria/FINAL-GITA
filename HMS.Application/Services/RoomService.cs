@@ -1,24 +1,23 @@
 ﻿using HMS.Application.DTOs;
 using HMS.Core.Entities;
-using HMS.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using HMS.Infrastructure.UnitOfWork;
 
 namespace HMS.Application.Services
 {
     public class RoomService : IRoomService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unit;
 
-        public RoomService(ApplicationDbContext context)
+        public RoomService(IUnitOfWork unit)
         {
-            _context = context;
+            _unit = unit;
         }
 
         public async Task<List<RoomDto>> GetRooms(Guid hotelId, double? minPrice, double? maxPrice)
         {
-            var query = _context.Rooms
-                .Where(r => r.HotelId == hotelId)
-                .AsQueryable();
+            var rooms = await _unit.Rooms.GetAllAsync();
+
+            var query = rooms.Where(r => r.HotelId == hotelId);
 
             if (minPrice.HasValue)
                 query = query.Where(r => r.Price >= minPrice.Value);
@@ -26,9 +25,40 @@ namespace HMS.Application.Services
             if (maxPrice.HasValue)
                 query = query.Where(r => r.Price <= maxPrice.Value);
 
-            var rooms = await query.ToListAsync();
+            return query.Select(r => new RoomDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Price = r.Price,
+                HotelId = r.HotelId
+            }).ToList();
+        }
 
-            return rooms.Select(r => new RoomDto
+        public async Task<List<RoomDto>> SearchAvailableRooms(
+            Guid hotelId,
+            double? minPrice,
+            double? maxPrice,
+            DateTime? date)
+        {
+            var rooms = await _unit.Rooms.GetAllAsync();
+
+            var query = rooms.Where(r => r.HotelId == hotelId);
+
+            if (minPrice.HasValue)
+                query = query.Where(r => r.Price >= minPrice.Value);
+
+            if (maxPrice.HasValue)
+                query = query.Where(r => r.Price <= maxPrice.Value);
+
+            if (date.HasValue)
+            {
+                query = query.Where(room =>
+                    !room.ReservationRooms.Any(rr =>
+                        rr.Reservation.CheckinDate <= date.Value &&
+                        rr.Reservation.CheckoutDate >= date.Value));
+            }
+
+            return query.Select(r => new RoomDto
             {
                 Id = r.Id,
                 Name = r.Name,
@@ -39,8 +69,9 @@ namespace HMS.Application.Services
 
         public async Task<RoomDto?> GetRoom(Guid hotelId, Guid roomId)
         {
-            var room = await _context.Rooms
-                .FirstOrDefaultAsync(r => r.Id == roomId && r.HotelId == hotelId);
+            var rooms = await _unit.Rooms.GetAllAsync();
+
+            var room = rooms.FirstOrDefault(r => r.Id == roomId && r.HotelId == hotelId);
 
             if (room == null)
                 return null;
@@ -56,6 +87,11 @@ namespace HMS.Application.Services
 
         public async Task<RoomDto> CreateRoom(Guid hotelId, CreateRoomDto dto)
         {
+            var hotels = await _unit.Hotels.GetAllAsync();
+
+            if (!hotels.Any(h => h.Id == hotelId))
+                throw new Exception("Hotel not found");
+
             if (dto.Price <= 0)
                 throw new Exception("Room price must be greater than 0");
 
@@ -67,8 +103,9 @@ namespace HMS.Application.Services
                 HotelId = hotelId
             };
 
-            _context.Rooms.Add(room);
-            await _context.SaveChangesAsync();
+            await _unit.Rooms.AddAsync(room);
+
+            await _unit.SaveAsync();
 
             return new RoomDto
             {
@@ -81,8 +118,9 @@ namespace HMS.Application.Services
 
         public async Task<bool> UpdateRoom(Guid hotelId, Guid roomId, UpdateRoomDto dto)
         {
-            var room = await _context.Rooms
-                .FirstOrDefaultAsync(r => r.Id == roomId && r.HotelId == hotelId);
+            var rooms = await _unit.Rooms.GetAllAsync();
+
+            var room = rooms.FirstOrDefault(r => r.Id == roomId && r.HotelId == hotelId);
 
             if (room == null)
                 return false;
@@ -93,17 +131,18 @@ namespace HMS.Application.Services
             room.Name = dto.Name;
             room.Price = dto.Price;
 
-            await _context.SaveChangesAsync();
+            _unit.Rooms.Update(room);
+
+            await _unit.SaveAsync();
 
             return true;
         }
 
         public async Task<bool> DeleteRoom(Guid hotelId, Guid roomId)
         {
-            var room = await _context.Rooms
-                .Include(r => r.ReservationRooms)
-                .ThenInclude(rr => rr.Reservation)
-                .FirstOrDefaultAsync(r => r.Id == roomId && r.HotelId == hotelId);
+            var rooms = await _unit.Rooms.GetAllAsync();
+
+            var room = rooms.FirstOrDefault(r => r.Id == roomId && r.HotelId == hotelId);
 
             if (room == null)
                 return false;
@@ -114,8 +153,9 @@ namespace HMS.Application.Services
             if (hasActiveReservation)
                 throw new Exception("Room has active or future reservations");
 
-            _context.Rooms.Remove(room);
-            await _context.SaveChangesAsync();
+            _unit.Rooms.Delete(room);
+
+            await _unit.SaveAsync();
 
             return true;
         }

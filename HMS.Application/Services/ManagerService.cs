@@ -1,38 +1,42 @@
 ﻿using HMS.Application.DTOs;
 using HMS.Core.Entities;
-using HMS.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using HMS.Infrastructure.UnitOfWork;
 
 namespace HMS.Application.Services
 {
     public class ManagerService : IManagerService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unit;
 
-        public ManagerService(ApplicationDbContext context)
+        public ManagerService(IUnitOfWork unit)
         {
-            _context = context;
+            _unit = unit;
         }
 
         public async Task<ManagerDto> CreateManager(Guid hotelId, CreateManagerDto dto)
         {
-            var emailExists = await _context.Users
-                .AnyAsync(u => u.Email == dto.Email);
+            var hotels = await _unit.Hotels.GetAllAsync();
 
-            if (emailExists)
+            if (!hotels.Any(h => h.Id == hotelId))
+                throw new Exception("Hotel not found");
+
+            var managers = await _unit.Users.GetAllAsync();
+
+            if (managers.Any(u => u.Email == dto.Email))
                 throw new Exception("Email already exists");
 
             var manager = new ApplicationUser
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                UserName = dto.Email
+                UserName = dto.Email,
+                HotelId = hotelId
             };
 
-            _context.Users.Add(manager);
+            await _unit.Users.AddAsync(manager);
 
-            await _context.SaveChangesAsync();
+            await _unit.SaveAsync();
 
             return new ManagerDto
             {
@@ -44,28 +48,39 @@ namespace HMS.Application.Services
 
         public async Task<bool> UpdateManager(Guid managerId, UpdateManagerDto dto)
         {
-            var manager = await _context.Users.FindAsync(managerId.ToString());
+            var managers = await _unit.Users.GetAllAsync();
+
+            var manager = managers.FirstOrDefault(m => m.Id == managerId);
 
             if (manager == null)
                 return false;
 
             manager.PhoneNumber = dto.PhoneNumber;
 
-            await _context.SaveChangesAsync();
+            _unit.Users.Update(manager);
+
+            await _unit.SaveAsync();
 
             return true;
         }
 
         public async Task<bool> DeleteManager(Guid managerId)
         {
-            var manager = await _context.Users.FindAsync(managerId.ToString());
+            var managers = await _unit.Users.GetAllAsync();
+
+            var manager = managers.FirstOrDefault(m => m.Id == managerId);
 
             if (manager == null)
                 return false;
 
-            _context.Users.Remove(manager);
+            var managerCount = managers.Count(m => m.HotelId == manager.HotelId);
 
-            await _context.SaveChangesAsync();
+            if (managerCount <= 1)
+                throw new Exception("Hotel must have at least one manager");
+
+            _unit.Users.Delete(manager);
+
+            await _unit.SaveAsync();
 
             return true;
         }

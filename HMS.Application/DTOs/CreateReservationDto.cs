@@ -4,7 +4,7 @@
 
     public DateTime CheckoutDate { get; set; }
 
-    public string GuestId { get; set; }
+    public Guid GuestId { get; set; }
 
     public List<Guid> RoomIds { get; set; }
 }

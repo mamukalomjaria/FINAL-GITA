@@ -1,37 +1,45 @@
 ﻿using AutoMapper;
 using HMS.Application.DTOs;
 using HMS.Core.Entities;
+using HMS.Infrastructure.UnitOfWork;
 
 public class HotelService : IHotelService
 {
-    private readonly IGenericRepository<Hotel> _hotelRepository;
-
+    private readonly IUnitOfWork _unit;
     private readonly IMapper _mapper;
 
-    public HotelService(
-        IGenericRepository<Hotel> hotelRepository,
-        IMapper mapper)
+    public HotelService(IUnitOfWork unit, IMapper mapper)
     {
-        _hotelRepository = hotelRepository;
+        _unit = unit;
         _mapper = mapper;
     }
 
     public async Task<IEnumerable<HotelDto>> GetHotels(HotelFilterDto filter)
     {
-        var hotels = await _hotelRepository.GetAllAsync();
+        var hotels = await _unit.Hotels.GetAllAsync();
 
         var query = hotels.AsQueryable();
 
-        if (!string.IsNullOrEmpty(filter.Country))
-            query = query.Where(h => h.Country == filter.Country);
+        if (!string.IsNullOrWhiteSpace(filter.Country))
+            query = query.Where(x => x.Country == filter.Country);
 
-        if (!string.IsNullOrEmpty(filter.City))
-            query = query.Where(h => h.City == filter.City);
+        if (!string.IsNullOrWhiteSpace(filter.City))
+            query = query.Where(x => x.City == filter.City);
 
         if (filter.Rating.HasValue)
-            query = query.Where(h => h.Rating == filter.Rating);
+            query = query.Where(x => x.Rating == filter.Rating);
 
-        return _mapper.Map<IEnumerable<HotelDto>>(query.ToList());
+        return _mapper.Map<IEnumerable<HotelDto>>(query);
+    }
+
+    public async Task<HotelDto?> GetHotelById(Guid id)
+    {
+        var hotel = await _unit.Hotels.GetByIdAsync(id);
+
+        if (hotel == null)
+            return null;
+
+        return _mapper.Map<HotelDto>(hotel);
     }
 
     public async Task<HotelDto> CreateHotel(CreateHotelDto dto)
@@ -40,16 +48,16 @@ public class HotelService : IHotelService
 
         hotel.Id = Guid.NewGuid();
 
-        await _hotelRepository.AddAsync(hotel);
+        await _unit.Hotels.AddAsync(hotel);
 
-        await _hotelRepository.SaveAsync();
+        await _unit.SaveAsync();
 
         return _mapper.Map<HotelDto>(hotel);
     }
 
     public async Task<HotelDto?> UpdateHotel(Guid id, UpdateHotelDto dto)
     {
-        var hotel = await _hotelRepository.GetByIdAsync(id);
+        var hotel = await _unit.Hotels.GetByIdAsync(id);
 
         if (hotel == null)
             return null;
@@ -58,26 +66,16 @@ public class HotelService : IHotelService
         hotel.Address = dto.Address;
         hotel.Rating = (byte)dto.Rating;
 
-        _hotelRepository.Update(hotel);
+        _unit.Hotels.Update(hotel);
 
-        await _hotelRepository.SaveAsync();
-
-        return _mapper.Map<HotelDto>(hotel);
-    }
-
-    public async Task<HotelDto?> GetHotelById(Guid id)
-    {
-        var hotel = await _hotelRepository.GetByIdAsync(id);
-
-        if (hotel == null)
-            return null;
+        await _unit.SaveAsync();
 
         return _mapper.Map<HotelDto>(hotel);
     }
 
     public async Task<bool> DeleteHotel(Guid id)
     {
-        var hotel = await _hotelRepository.GetByIdAsync(id);
+        var hotel = await _unit.Hotels.GetByIdAsync(id);
 
         if (hotel == null)
             return false;
@@ -85,16 +83,9 @@ public class HotelService : IHotelService
         if (hotel.Rooms.Any())
             throw new Exception("Hotel has rooms and cannot be deleted");
 
-        var hasReservations = hotel.Rooms
-            .SelectMany(r => r.ReservationRooms)
-            .Any();
+        _unit.Hotels.Delete(hotel);
 
-        if (hasReservations)
-            throw new Exception("Hotel has active reservations");
-
-        _hotelRepository.Delete(hotel);
-
-        await _hotelRepository.SaveAsync();
+        await _unit.SaveAsync();
 
         return true;
     }

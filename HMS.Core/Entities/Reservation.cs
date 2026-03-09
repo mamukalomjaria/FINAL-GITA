@@ -1,19 +1,16 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using HMS.Core.Entities;
 
-namespace HMS.Core.Entities
+public class Reservation
 {
-    public class Reservation
-    {
-        [Key]
-        public Guid Id { get; set; }
+    public Guid Id { get; set; }
 
-        public DateTime CheckinDate { get; set; }
+    public DateTime CheckinDate { get; set; }
 
-        public DateTime CheckoutDate { get; set; }
+    public DateTime CheckoutDate { get; set; }
 
-        public string GuestId { get; set; }
-        public ApplicationUser Guest { get; set; }
+    public Guid GuestId { get; set; }
 
-        public ICollection<ReservationRoom> ReservationRooms { get; set; }
-    }
+    public Guest Guest { get; set; }
+
+    public ICollection<ReservationRoom> ReservationRooms { get; set; }
 }

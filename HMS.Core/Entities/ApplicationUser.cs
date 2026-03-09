@@ -1,25 +1,17 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
 
 namespace HMS.Core.Entities
 {
-    public class ApplicationUser : IdentityUser
+    public class ApplicationUser : IdentityUser<Guid>
     {
-        [Required]
-        [MaxLength(50)]
-        public string FirstName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(50)]
-        public string LastName { get; set; }
+        public string LastName { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(11)]
-        [MinLength(11)]
-        public string PersonalNumber { get; set; }
+        public string PersonalNumber { get; set; } = string.Empty;
 
-        public ICollection<Hotel> ManagedHotels { get; set; }
+        public Guid? HotelId { get; set; }
 
-        public ICollection<Reservation> Reservations { get; set; }
+        public Hotel? Hotel { get; set; }
     }
 }
