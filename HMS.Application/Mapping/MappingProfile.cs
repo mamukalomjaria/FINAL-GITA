@@ -9,6 +9,7 @@ namespace HMS.Application.Mapping
         public MappingProfile()
         {
             CreateMap<CreateHotelDto, Hotel>();
+            CreateMap<Hotel, HotelDto>();
         }
     }
 }

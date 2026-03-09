@@ -46,10 +46,7 @@ public class HotelService : IHotelService
     {
         var hotel = _mapper.Map<Hotel>(dto);
 
-        hotel.Id = Guid.NewGuid();
-
         await _unit.Hotels.AddAsync(hotel);
-
         await _unit.SaveAsync();
 
         return _mapper.Map<HotelDto>(hotel);

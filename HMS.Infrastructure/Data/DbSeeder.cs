@@ -1,10 +1,11 @@
 ﻿using HMS.Core.Entities;
 using Microsoft.AspNetCore.Identity;
+
 namespace HMS.Infrastructure.Data
 {
     public static class DbSeeder
     {
-        public static async Task SeedRoles(RoleManager<IdentityRole> roleManager)
+        public static async Task SeedRoles(RoleManager<IdentityRole<Guid>> roleManager)
         {
             string[] roles = { "Admin", "Manager", "Guest" };
 
@@ -12,29 +13,29 @@ namespace HMS.Infrastructure.Data
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
-                    await roleManager.CreateAsync(new IdentityRole(role));
+                    await roleManager.CreateAsync(new IdentityRole<Guid> { Name = role });
                 }
             }
-
         }
 
-
-        public static async Task SeedAdmin( UserManager<ApplicationUser> userManager)
+        public static async Task SeedAdmin(UserManager<ApplicationUser> userManager)
         {
-            var email = "admin@test.com";
+            var email = "admin@hms.com";
 
-            if (await userManager.FindByEmailAsync(email) == null)
+            var admin = await userManager.FindByEmailAsync(email);
+
+            if (admin == null)
             {
-                var admin = new ApplicationUser
+                admin = new ApplicationUser
                 {
                     UserName = email,
                     Email = email,
-                    FirstName = "System",
-                    LastName = "Admin",
+                    FirstName = "Admin",
+                    LastName = "User",
                     PersonalNumber = "00000000000"
                 };
 
-                await userManager.CreateAsync(admin, "Password123.");
+                await userManager.CreateAsync(admin, "Admin123!");
                 await userManager.AddToRoleAsync(admin, "Admin");
             }
         }

@@ -90,9 +90,9 @@ namespace HMS.API.Controllers
             var roles = await _userManager.GetRolesAsync(user);
 
             var claims = new List<Claim>
-            {
+{
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email)
+                new Claim(ClaimTypes.Email, user.Email ?? "")
             };
 
             foreach (var role in roles)
@@ -101,7 +101,7 @@ namespace HMS.API.Controllers
             }
 
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])
+                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
             );
 
             var creds = new SigningCredentials(

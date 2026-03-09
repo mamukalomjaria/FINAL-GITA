@@ -36,14 +36,14 @@ namespace HMS.Application.Services
 
             if (date.HasValue)
                 query = query.Where(r =>
-                    r.CheckinDate <= date && r.CheckoutDate >= date);
+                    r.CheckInDate <= date && r.CheckOutDate >= date);
 
             return query.Select(r => new ReservationDto
             {
                 Id = r.Id,
                 GuestId = r.GuestId,
-                CheckinDate = r.CheckinDate,
-                CheckoutDate = r.CheckoutDate,
+                CheckinDate = r.CheckInDate,
+                CheckoutDate = r.CheckOutDate,
                 RoomIds = r.ReservationRooms.Select(rr => rr.RoomId).ToList()
             }).ToList();
         }
@@ -62,8 +62,8 @@ namespace HMS.Application.Services
             {
                 Id = Guid.NewGuid(),
                 GuestId = dto.GuestId,
-                CheckinDate = dto.CheckinDate,
-                CheckoutDate = dto.CheckoutDate,
+                CheckInDate = dto.CheckinDate,
+                CheckOutDate = dto.CheckoutDate,
                 ReservationRooms = new List<ReservationRoom>()
             };
 
@@ -79,8 +79,8 @@ namespace HMS.Application.Services
                 var overlapping = reservations.Any(r =>
                     r.ReservationRooms.Any(rr =>
                         rr.RoomId == roomId &&
-                        dto.CheckinDate < r.CheckoutDate &&
-                        dto.CheckoutDate > r.CheckinDate));
+                        dto.CheckinDate < r.CheckOutDate &&
+                        dto.CheckoutDate > r.CheckInDate));
 
                 if (overlapping)
                     throw new Exception($"Room {roomId} already reserved");
@@ -99,8 +99,8 @@ namespace HMS.Application.Services
             {
                 Id = reservation.Id,
                 GuestId = reservation.GuestId,
-                CheckinDate = reservation.CheckinDate,
-                CheckoutDate = reservation.CheckoutDate,
+                CheckinDate = reservation.CheckInDate,
+                CheckoutDate = reservation.CheckOutDate,
                 RoomIds = reservation.ReservationRooms.Select(r => r.RoomId).ToList()
             };
         }
@@ -126,15 +126,15 @@ namespace HMS.Application.Services
                     r.Id != reservationId &&
                     r.ReservationRooms.Any(rr =>
                         rr.RoomId == room.RoomId &&
-                        dto.CheckinDate < r.CheckoutDate &&
-                        dto.CheckoutDate > r.CheckinDate));
+                        dto.CheckinDate < r.CheckOutDate &&
+                        dto.CheckoutDate > r.CheckInDate));
 
                 if (overlapping)
                     throw new Exception($"Room {room.RoomId} already reserved in that period");
             }
 
-            reservation.CheckinDate = dto.CheckinDate;
-            reservation.CheckoutDate = dto.CheckoutDate;
+            reservation.CheckInDate = dto.CheckinDate;
+            reservation.CheckOutDate = dto.CheckoutDate;
 
             _unit.Reservations.Update(reservation);
 
@@ -170,8 +170,8 @@ namespace HMS.Application.Services
             {
                 Id = r.Id,
                 GuestId = r.GuestId,
-                CheckinDate = r.CheckinDate,
-                CheckoutDate = r.CheckoutDate,
+                CheckinDate = r.CheckInDate,
+                CheckoutDate = r.CheckOutDate,
                 RoomIds = r.ReservationRooms.Select(rr => rr.RoomId).ToList()
             }).ToList();
         }

@@ -92,7 +92,7 @@ namespace HMS.Application.Services
             if (guest == null)
                 return false;
 
-            if (guest.Reservations.Any(r => r.CheckoutDate >= DateTime.Today))
+            if (guest.Reservations.Any(r => r.CheckOutDate >= DateTime.Today))
                 throw new Exception("Guest has active or future reservations");
 
             _unit.Guests.Delete(guest);

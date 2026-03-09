@@ -26,12 +26,14 @@ namespace HMS.API.Middleware
 
                 var response = new
                 {
-                    error = ex.Message
+                    error = ex.Message,
+                    details = ex.InnerException?.Message
                 };
 
                 await context.Response.WriteAsync(
                     JsonSerializer.Serialize(response)
                 );
+
             }
         }
     }

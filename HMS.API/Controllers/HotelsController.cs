@@ -12,18 +12,26 @@ namespace HMS.API.Controllers
         private readonly IHotelService _hotelService;
         private readonly IRoomService _roomService;
         private readonly IReservationService _reservationService;
+        private readonly IManagerService _managerService;
+        private readonly IGuestService _guestService;
 
         public HotelsController(
             IHotelService hotelService,
             IRoomService roomService,
-            IReservationService reservationService)
+            IReservationService reservationService,
+            IManagerService managerService,
+            IGuestService guestService)
         {
             _hotelService = hotelService;
             _roomService = roomService;
             _reservationService = reservationService;
+            _managerService = managerService;
+            _guestService = guestService;
         }
 
+        // =========================
         // HOTELS
+        // =========================
 
         [HttpGet]
         public async Task<IActionResult> GetHotels([FromQuery] HotelFilterDto filter)
@@ -77,7 +85,9 @@ namespace HMS.API.Controllers
             return NoContent();
         }
 
+        // =========================
         // ROOMS
+        // =========================
 
         [HttpGet("{hotelId}/rooms")]
         public async Task<IActionResult> GetRooms(Guid hotelId, [FromQuery] double? minPrice, [FromQuery] double? maxPrice)
@@ -131,7 +141,9 @@ namespace HMS.API.Controllers
             return NoContent();
         }
 
+        // =========================
         // RESERVATIONS
+        // =========================
 
         [Authorize(Roles = "Guest")]
         [HttpPost("{hotelId}/reservations")]
@@ -176,12 +188,97 @@ namespace HMS.API.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] Guid? hotelId,[FromQuery] Guid? guestId,[FromQuery] Guid? roomId,[FromQuery] DateTime? date)
+        public async Task<IActionResult> Search(
+            [FromQuery] Guid? hotelId,
+            [FromQuery] Guid? guestId,
+            [FromQuery] Guid? roomId,
+            [FromQuery] DateTime? date)
         {
             var result = await _reservationService
                 .SearchReservations(hotelId, guestId, roomId, date);
 
             return Ok(result);
+        }
+
+        // =========================
+        // MANAGERS
+        // =========================
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{hotelId}/managers")]
+        public async Task<IActionResult> CreateManager(Guid hotelId, CreateManagerDto dto)
+        {
+            var manager = await _managerService.CreateManager(hotelId, dto);
+
+            return Ok(manager);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("managers/{managerId}")]
+        public async Task<IActionResult> UpdateManager(Guid managerId, UpdateManagerDto dto)
+        {
+            var result = await _managerService.UpdateManager(managerId, dto);
+
+            if (!result)
+                return NotFound();
+
+            return NoContent();
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("managers/{managerId}")]
+        public async Task<IActionResult> DeleteManager(Guid managerId)
+        {
+            var result = await _managerService.DeleteManager(managerId);
+
+            if (!result)
+                return BadRequest("Cannot delete manager");
+
+            return NoContent();
+        }
+
+        // =========================
+        // GUESTS
+        // =========================
+
+        [HttpPost("guests")]
+        public async Task<IActionResult> CreateGuest(CreateGuestDto dto)
+        {
+            var guest = await _guestService.CreateGuest(dto);
+            return Ok(guest);
+        }
+
+        [HttpGet("guests/{id}")]
+        public async Task<IActionResult> GetGuest(Guid id)
+        {
+            var guest = await _guestService.GetGuest(id);
+
+            if (guest == null)
+                return NotFound();
+
+            return Ok(guest);
+        }
+
+        [HttpPut("guests/{id}")]
+        public async Task<IActionResult> UpdateGuest(Guid id, UpdateGuestDto dto)
+        {
+            var result = await _guestService.UpdateGuest(id, dto);
+
+            if (!result)
+                return NotFound();
+
+            return NoContent();
+        }
+
+        [HttpDelete("guests/{id}")]
+        public async Task<IActionResult> DeleteGuest(Guid id)
+        {
+            var result = await _guestService.DeleteGuest(id);
+
+            if (!result)
+                return NotFound();
+
+            return NoContent();
         }
     }
 }

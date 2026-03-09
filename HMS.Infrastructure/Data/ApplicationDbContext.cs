@@ -41,7 +41,10 @@ namespace HMS.Infrastructure.Data
             modelBuilder.Entity<ApplicationUser>()
                 .HasIndex(x => x.Email)
                 .IsUnique();
-
+            modelBuilder.Entity<Reservation>()
+               .HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(r => r.GuestId);
             modelBuilder.Entity<ApplicationUser>()
                 .HasOne(u => u.Hotel)
                 .WithMany(h => h.Managers)

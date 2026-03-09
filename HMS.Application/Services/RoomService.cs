@@ -54,8 +54,8 @@ namespace HMS.Application.Services
             {
                 query = query.Where(room =>
                     !room.ReservationRooms.Any(rr =>
-                        rr.Reservation.CheckinDate <= date.Value &&
-                        rr.Reservation.CheckoutDate >= date.Value));
+                        rr.Reservation.CheckInDate <= date.Value &&
+                        rr.Reservation.CheckOutDate >= date.Value));
             }
 
             return query.Select(r => new RoomDto
@@ -148,7 +148,7 @@ namespace HMS.Application.Services
                 return false;
 
             var hasActiveReservation = room.ReservationRooms
-                .Any(rr => rr.Reservation.CheckoutDate >= DateTime.Today);
+                .Any(rr => rr.Reservation.CheckOutDate >= DateTime.Today);
 
             if (hasActiveReservation)
                 throw new Exception("Room has active or future reservations");

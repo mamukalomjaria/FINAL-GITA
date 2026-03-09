@@ -25,17 +25,22 @@ namespace HMS.Application.Services
             if (managers.Any(u => u.Email == dto.Email))
                 throw new Exception("Email already exists");
 
+            if (managers.Any(u => u.PersonalNumber == dto.PersonalNumber))
+                throw new Exception("Personal number already exists");
+
             var manager = new ApplicationUser
             {
                 Id = Guid.NewGuid(),
                 Email = dto.Email,
-                PhoneNumber = dto.PhoneNumber,
                 UserName = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                PersonalNumber = dto.PersonalNumber,
                 HotelId = hotelId
             };
 
             await _unit.Users.AddAsync(manager);
-
             await _unit.SaveAsync();
 
             return new ManagerDto
